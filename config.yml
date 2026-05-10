@@ -1,0 +1,15 @@
+server:
+  port: 36789
+  mode: "dev"
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  Password:
+  database: 0
+mongo:
+  host: 127.0.0.1
+  port: 9999
+  Password: 0
+  database: 0
+  

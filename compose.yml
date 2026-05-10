@@ -1,0 +1,15 @@
+networks:
+  app-net:
+    driver: overlay
+services:
+  app:
+    ports:
+      - target: 36789
+        published: 80
+        mode: ingress
+    networks:
+      - app-net
+  mongo:
+    image: mongodb/mongodb-community-server:8.0-ubi9-slim
+    ports: 
+    - "9999:9999"
