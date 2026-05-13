@@ -1,5 +1,10 @@
 package manager
 
+import pevent "parallel/internal/event"
+
+// Event is an alias for the shared event type.
+type Event = pevent.Event
+
 type IngressRouter struct {
 	cBus CounterBus
 	rBus ResponseBus

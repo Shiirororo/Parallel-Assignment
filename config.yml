@@ -5,11 +5,11 @@ server:
 redis:
   host: 127.0.0.1
   port: 6379
-  Password:
+  password:
   database: 0
+
 mongo:
   host: 127.0.0.1
-  port: 9999
-  Password: 0
-  database: 0
-  
+  port: 27017
+  password:
+  database: paralisus

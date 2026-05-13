@@ -1,15 +1,31 @@
 networks:
   app-net:
-    driver: overlay
+    driver: bridge
+
+volumes:
+  redis:
+  mongo:
+
 services:
-  app:
+  redis:
+    image: redis:7
+    container_name: redis_container
     ports:
-      - target: 36789
-        published: 80
-        mode: ingress
+      - "6379:6379"
+    volumes:
+      - redis:/data
     networks:
       - app-net
+    restart: unless-stopped
+
   mongo:
     image: mongodb/mongodb-community-server:8.0-ubi9-slim
-    ports: 
-    - "9999:9999"
+    container_name: mongo_container
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo:/data/db
+    networks:
+      - app-net
+    restart: unless-stopped
+  #app:
