@@ -4,5 +4,10 @@ import "encoding/json"
 
 type Event struct {
 	Type    string
-	Payload json.RawMessage `json:"payload"`
+	Request Request
+}
+
+type Request struct {
+	OriginID string
+	Payload  json.RawMessage `json:"payload"`
 }

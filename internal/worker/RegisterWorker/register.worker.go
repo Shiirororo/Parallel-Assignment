@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"parallel/internal/event"
+	luascripting "parallel/internal/lua-scripting"
 	"parallel/internal/worker"
 	"sync"
 	"sync/atomic"
@@ -15,15 +16,10 @@ import (
 // RegisterPayload is the expected event payload for a register request.
 type RegisterPayload struct {
 	ClassID    string `json:"class_id"`
-	StudentID  string `json:"student_id"`
+	StudentID  string `json:"student_id"`  //Need to be array
 	ResponseCh string `json:"response_ch"` // identifier / correlation ID for the response
 }
 
-// Status codes
-const (
-	StatusSuccess = 1
-	StatusFull    = 0
-)
 
 // ResponseWorker processes a single register-response event.
 type RegisterWorker struct {
@@ -41,25 +37,18 @@ func newResponseWorker(id int32, client *redis.Client) *RegisterWorker {
 
 func (r *RegisterWorker) handle(ctx context.Context, e event.Event) {
 	var p RegisterPayload
-	if err := json.Unmarshal(e.Payload, &p); err != nil {
+	if err := json.Unmarshal(e.Request.Payload, &p); err != nil {
 		log.Printf("[ResponseWorker %d] bad payload: %v", r.w.ID, err)
 		return
 	}
 
-	slots, err := r.client.Get(ctx, p.ClassID).Int()
-	if err == redis.Nil {
-		log.Printf("[ResponseWorker %d] class %s not found", r.w.ID, p.ClassID)
-		return
-	} else if err != nil {
-		log.Printf("[ResponseWorker %d] redis error: %v", r.w.ID, err)
+	result, err := luascripting.RegisterScript.Run(ctx, r.client, []string{p.ClassID}).Int()
+	if err != nil {
+		log.Printf("[ResponseWorker %d] lua error: %v", r.w.ID, err)
 		return
 	}
 
-	status := StatusFull
-	if slots > 0 {
-		status = StatusSuccess
-	}
-	log.Printf("[ResponseWorker %d] class=%s student=%s status=%d", r.w.ID, p.ClassID, p.StudentID, status)
+	log.Printf("[ResponseWorker %d] class=%s student=%s status=%d", r.w.ID, p.ClassID, p.StudentID, result)
 }
 
 // Bus
