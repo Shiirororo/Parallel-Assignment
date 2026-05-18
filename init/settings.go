@@ -13,7 +13,7 @@ type Config struct {
 	//Grafana   GrafanaSetting  `mapstructure:"grafana"`
 	//Logger    LogSetting      `mapstructure:"logger"`
 	//Resend    ResendSetting   `mapstructure:"resend"`
-	Kafka KafkaSetting `mapstructure:"kafka"`
+	// Kafka KafkaSetting `mapstructure:"kafka"`
 }
 
 type ServerSetting struct {
@@ -21,8 +21,10 @@ type ServerSetting struct {
 	Mode string `mapstructure:"mode"`
 }
 type MongoSetting struct {
-	URI  string `mapstructure:"URI"`
-	Port string `mapstructure:"port"`
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	Database string `mapstructure:"database"`
 }
 type RedisSetting struct {
 	Host     string `mapstructure:"host"`
@@ -30,15 +32,12 @@ type RedisSetting struct {
 	Password string `mapstructure:"password"`
 	Database int    `mapstructure:"database"`
 }
-type KafkaSetting struct {
-}
 
 func LoadConfig() Config {
 	viper := viper.New()
-	viper.AddConfigPath("./config")
-
-	viper.SetConfigName("local")
-	viper.SetConfigFile("yml")
+	viper.AddConfigPath(".")
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
 
 	err := viper.ReadInConfig()
 	if err != nil {

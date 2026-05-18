@@ -19,7 +19,7 @@ type Records struct {
 	Slot string
 }
 
-func newWarmUpClient(client *redis.Client) *WarmUpClient {
+func NewWarmUpClient(client *redis.Client) *WarmUpClient {
 	return &WarmUpClient{client: client}
 }
 
@@ -85,7 +85,7 @@ func (c *WarmUpClient) BulkWarmup(ctx context.Context, file_name string) {
 	fmt.Println("Bulk import complete")
 }
 
-func (c *WarmUpClient) unload(ctx context.Context) {
+func (c *WarmUpClient) Unload(ctx context.Context) {
 	err := c.client.FlushDB(ctx).Err()
 	if err != nil {
 		panic(err)

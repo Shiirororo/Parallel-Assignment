@@ -1,4 +1,4 @@
-package process
+package logging
 
 import (
 	"context"
@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"log"
 	"parallel/internal/event"
+	"parallel/internal/service"
 	"parallel/internal/worker"
+	"sync"
+	"sync/atomic"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -40,4 +43,54 @@ func (lw *LoggingWorker) handle(ctx context.Context, e event.Event) {
 		panic(err)
 	}
 	fmt.Printf("Successfully Insert into a table: %s", res.InsertedID)
+}
+
+type LoggingBus struct {
+	queue       <-chan event.Event
+	client      *mongo.Client
+	workerCount atomic.Int32
+	wg          sync.WaitGroup
+}
+
+func NewLoggingBus(queue <-chan event.Event, client *mongo.Client) *LoggingBus {
+	return &LoggingBus{queue: queue, client: client}
+}
+
+func (b *LoggingBus) Start(ctx context.Context, n int) {
+	for i := 0; i < n; i++ {
+		b.spawnWorker(ctx)
+	}
+}
+
+func (b *LoggingBus) spawnWorker(ctx context.Context) {
+	id := b.workerCount.Add(1)
+	lw := newLoggingWorker(id, b.client)
+	b.wg.Add(1)
+	service.TrackGo(+1)
+	go func() {
+		defer b.wg.Done()
+		defer service.TrackGo(-1)
+		defer lw.w.State.Store(false)
+		for {
+			select {
+			case e, ok := <-b.queue:
+				if !ok {
+					return
+				}
+				lw.handle(ctx, e)
+			case <-ctx.Done():
+				for {
+					select {
+					case e, ok := <-b.queue:
+						if !ok {
+							return
+						}
+						lw.handle(context.Background(), e)
+					default:
+						return
+					}
+				}
+			}
+		}
+	}()
 }

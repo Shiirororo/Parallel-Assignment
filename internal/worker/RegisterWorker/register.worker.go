@@ -1,4 +1,4 @@
-package responseworker
+package response
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"log"
 	"parallel/internal/event"
 	luascripting "parallel/internal/lua-scripting"
+	"parallel/internal/service"
 	"parallel/internal/worker"
 	"sync"
 	"sync/atomic"
@@ -19,7 +20,6 @@ type RegisterPayload struct {
 	StudentID  string `json:"student_id"`  //Need to be array
 	ResponseCh string `json:"response_ch"` // identifier / correlation ID for the response
 }
-
 
 // ResponseWorker processes a single register-response event.
 type RegisterWorker struct {
@@ -75,8 +75,10 @@ func (b *RegisterBus) spawnWorker(ctx context.Context) {
 	id := b.workerCount.Add(1)
 	rw := newResponseWorker(id, b.client)
 	b.wg.Add(1)
+	service.TrackGo(+1)
 	go func() {
 		defer b.wg.Done()
+		defer service.TrackGo(-1)
 		defer rw.w.State.Store(false)
 		for {
 			select {

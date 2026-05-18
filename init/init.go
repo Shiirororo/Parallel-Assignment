@@ -13,6 +13,7 @@ import (
 func InitRedis(config Config) *redis.Client {
 	r := config.Redis
 	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", r.Host, r.Port),
 		Password: r.Password,
 		DB:       r.Database,
 		PoolSize: 10,
@@ -27,11 +28,10 @@ func InitDB(config Config) *mongo.Client {
 		10*time.Second,
 	)
 	defer cancel()
+	uri := fmt.Sprintf("mongodb://%s:%d", config.Mongo.Host, config.Mongo.Port)
 	client, err := mongo.Connect(
 		ctx,
-		options.Client().ApplyURI(
-			config.Mongo.URI,
-		),
+		options.Client().ApplyURI(uri),
 	)
 	if err != nil {
 		panic(err)

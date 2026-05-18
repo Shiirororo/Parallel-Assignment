@@ -10,5 +10,6 @@ func Run() (*redis.Client, *mongo.Client) {
 
 	rdb := InitRedis(config)
 	db := InitDB(config)
+
 	return rdb, db
 }
