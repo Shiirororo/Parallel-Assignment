@@ -34,8 +34,12 @@ type RedisSetting struct {
 }
 
 func LoadConfig() Config {
+	return LoadConfigFrom(".")
+}
+
+func LoadConfigFrom(path string) Config {
 	viper := viper.New()
-	viper.AddConfigPath(".")
+	viper.AddConfigPath(path)
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 

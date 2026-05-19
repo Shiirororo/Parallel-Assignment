@@ -21,3 +21,7 @@ var RegisterScript = redis.NewScript(
 var GetClassScript = redis.NewScript(
 	loadScript("./scripts/script.get-class.lua"),
 )
+
+var UnregisterScript = redis.NewScript(
+	loadScript("./scripts/script.unregister.lua"),
+)

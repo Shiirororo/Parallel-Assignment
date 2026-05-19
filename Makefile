@@ -19,4 +19,4 @@ run:
 	go run ./main.go
 
 build:
-	go build --path=$(APP_PATH)
+	go build -o paralisus .

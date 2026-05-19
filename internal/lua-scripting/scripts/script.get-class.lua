@@ -1,9 +1,10 @@
 local result = {}
 
 for i, key in ipairs(KEYS) do
-    local value = tonumber(redis.call("GET", key) or "0")
+    local value = redis.call("GET", key)
     if value then
         table.insert(result, key)
+        table.insert(result, value)
     end
 end
 

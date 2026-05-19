@@ -10,6 +10,7 @@ import (
 	"parallel/internal/worker"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -57,11 +58,13 @@ type RegisterBus struct {
 	queue       <-chan event.Event
 	client      *redis.Client
 	workerCount atomic.Int32
+	minWorker   int
+	maxWorker   int
 	wg          sync.WaitGroup
 }
 
-func NewResponseBus(queue <-chan event.Event, client *redis.Client) *RegisterBus {
-	return &RegisterBus{queue: queue, client: client}
+func NewRegisterBus(queue <-chan event.Event, client *redis.Client) *RegisterBus {
+	return &RegisterBus{queue: queue, client: client, minWorker: 10, maxWorker: 1000}
 }
 
 // Start launches n workers and blocks until ctx is cancelled, then drains remaining jobs.
@@ -69,6 +72,8 @@ func (b *RegisterBus) Start(ctx context.Context, n int) {
 	for i := 0; i < n; i++ {
 		b.spawnWorker(ctx)
 	}
+
+	//monitor, scale worker is needed?
 }
 
 func (b *RegisterBus) spawnWorker(ctx context.Context) {
@@ -79,14 +84,30 @@ func (b *RegisterBus) spawnWorker(ctx context.Context) {
 	go func() {
 		defer b.wg.Done()
 		defer service.TrackGo(-1)
+		defer b.workerCount.Add(-1)
 		defer rw.w.State.Store(false)
+		idleTimer := time.NewTimer(30 * time.Second)
+		defer idleTimer.Stop()
 		for {
 			select {
 			case e, ok := <-b.queue:
 				if !ok {
 					return
 				}
+				if !idleTimer.Stop() {
+					select {
+					case <-idleTimer.C:
+					default:
+					}
+				}
+				idleTimer.Reset(30 * time.Second)
 				rw.handle(ctx, e)
+			case <-idleTimer.C:
+				if b.workerCount.Load() > int32(b.minWorker) {
+					log.Printf("[RegisterWorker %d] idle timeout, scaling down", rw.w.ID)
+					return
+				}
+				idleTimer.Reset(30 * time.Second)
 			case <-ctx.Done():
 				// drain remaining jobs before exit
 				for {
