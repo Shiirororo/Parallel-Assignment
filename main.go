@@ -35,14 +35,7 @@ func main() {
 	go func() {
 		http.ListenAndServe("localhost:6060", nil)
 	}()
-
-	// http.HandleFunc("api/class/id?", func(w http.ResponseWriter, r *http.Request) {
-	// 	//to do: build later
-	// 	query := r.URL.Query()
-	// 	class_id := query.Get("id")
-	// 	_ = class_id
-	// })
-	http.HandleFunc("api/class/getClassInfo", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/class/getClassInfo", func(w http.ResponseWriter, r *http.Request) {
 		ids := r.URL.Query().Get("ids")
 		if ids == "" {
 			http.Error(w, "missing ids", http.StatusBadRequest)
@@ -56,18 +49,21 @@ func main() {
 			return
 		}
 
-		result := make(map[string]string, len(raw)/2)
+		type ClassInfo struct {
+			RemainSlot string `json:"remain_slot"`
+		}
+		result := make(map[string]ClassInfo, len(raw)/2)
 		for i := 0; i+1 < len(raw); i += 2 {
-			result[raw[i]] = raw[i+1]
+			result[raw[i]] = ClassInfo{RemainSlot: raw[i+1]}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
 	})
-	http.HandleFunc("api/class/register", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/class/register", func(w http.ResponseWriter, r *http.Request) {
 
 	})
-	http.HandleFunc("api/class/unregister", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/class/unregister", func(w http.ResponseWriter, r *http.Request) {
 
 	})
 	http.ListenAndServe(":36789", nil)

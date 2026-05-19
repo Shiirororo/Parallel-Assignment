@@ -15,13 +15,13 @@ func loadScript(path string) string {
 }
 
 var RegisterScript = redis.NewScript(
-	loadScript("./scripts/script.register.lua"),
+	loadScript("./internal/lua-scripting/scripts/script.register.lua"),
 )
 
 var GetClassScript = redis.NewScript(
-	loadScript("./scripts/script.get-class.lua"),
+	loadScript("./internal/lua-scripting/scripts/script.get-class.lua"),
 )
 
 var UnregisterScript = redis.NewScript(
-	loadScript("./scripts/script.unregister.lua"),
+	loadScript("./internal/lua-scripting/scripts/script.unregister.lua"),
 )
