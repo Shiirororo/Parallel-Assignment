@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 	"path/filepath"
-	"runtime"
 
 	bootstrap "parallel/init"
 	"parallel/internal/service"
@@ -15,8 +15,8 @@ func main() {
 	unload := flag.Bool("unload", false, "flush Redis DB")
 	flag.Parse()
 
-	_, file, _, _ := runtime.Caller(0)
-	root := filepath.Join(filepath.Dir(file), "../..")
+	exe, _ := os.Executable()
+	root := filepath.Dir(exe)
 
 	config := bootstrap.LoadConfigFrom(root)
 	rdb := bootstrap.InitRedis(config)

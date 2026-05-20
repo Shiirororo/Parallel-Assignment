@@ -31,7 +31,9 @@ jobs:
           echo "port=$(grep 'port' config.yml | head -1 | awk '{print $2}')" >> $GITHUB_OUTPUT
 
       - name: Build
-        run: go build -o paralisus .
+        run: |
+          go build -o paralisus .
+          go build -o cmd/warmup/main ./cmd/warmup
 
       - name: Warm up Redis
         run: ./cmd/warmup/main

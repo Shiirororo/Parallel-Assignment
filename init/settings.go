@@ -53,7 +53,7 @@ func LoadConfigFrom(path string) Config {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("Failed to read the configuration %w \n", err))
+		panic(fmt.Errorf("Failed to read the configuration, error: %w \n", err))
 	}
 	fmt.Println("Server Port:: ", viper.GetInt("server.port"))
 	var config Config
