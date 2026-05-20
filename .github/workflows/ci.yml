@@ -25,6 +25,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Read config
+        id: cfg
+        run: |
+          echo "port=$(grep 'port' config.yml | head -1 | awk '{print $2}')" >> $GITHUB_OUTPUT
+
       - name: Build
         run: go build -o paralisus .
 
@@ -33,24 +38,22 @@ jobs:
 
       - name: Start server
         run: ./paralisus &
-        env:
-          SERVER_PORT: 36789
 
       - name: Wait for server
         run: sleep 2
 
       - name: Test getClassInfo (single)
         run: |
-          res=$(curl -sf "http://localhost:36789/api/class/getClassInfo?ids=161001")
+          res=$(curl -sf "http://localhost:${{ steps.cfg.outputs.port }}/api/class/getClassInfo?ids=161001")
           echo "$res" | grep -q "remain_slot"
 
       - name: Test getClassInfo (multiple)
         run: |
-          res=$(curl -sf "http://localhost:36789/api/class/getClassInfo?ids=161001,161002")
+          res=$(curl -sf "http://localhost:${{ steps.cfg.outputs.port }}/api/class/getClassInfo?ids=161001,161002")
           echo "$res" | grep -q "161001"
           echo "$res" | grep -q "161002"
 
       - name: Test missing ids returns 400
         run: |
-          status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:36789/api/class/getClassInfo")
+          status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${{ steps.cfg.outputs.port }}/api/class/getClassInfo")
           [ "$status" = "400" ]
