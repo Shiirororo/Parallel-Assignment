@@ -25,10 +25,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # - name: Read config
-      #   id: cfg
-      #   run: |
-      #     echo "port=$(yq '.port' config.yml)" >> $GITHUB_OUTPUT
+      - name: Read config
+        id: cfg
+        run: |
+          echo "port=$(yq '.port' config.yml)" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |
@@ -36,7 +36,7 @@ jobs:
           go build -o cmd/warmup/main ./cmd/warmup
 
       - name: Warm up Redis
-        run: ./cmd/warmup/main
+        run: go ./cmd/warmup/main.go
 
       - name: Start server
         run: ./paralisus &
