@@ -26,23 +26,17 @@ jobs:
           go-version-file: go.mod
 
       - name: Read config
+        id: cfg
         run: |
-          PORT=$(yq '.port' config.yml)
-
-          if [ -z "$PORT" ] || [ "$PORT" = "null" ]; then
-            echo "Failed to read port from config.yml"
-            exit 1
-          fi
-
-          echo "port=$PORT" >> $GITHUB_OUTPUT
+          echo "port=$(grep 'port' config.yml | head -1 | awk '{print $2}')" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |
           go build -o paralisus .
-          go build -o cmd/warmup/main ./cmd/warmup
+          go build -o warmup ./cmd/warmup
 
       - name: Warm up Redis
-        run: go ./cmd/warmup/main.go
+        run: ./warmup
 
       - name: Start server
         run: ./paralisus &
