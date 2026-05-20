@@ -2,6 +2,8 @@ package bootstrap
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -40,6 +42,12 @@ func LoadConfig() Config {
 func LoadConfigFrom(path string) Config {
 	viper := viper.New()
 	viper.AddConfigPath(path)
+
+	// also search next to the executable (useful when binary is run from a different cwd)
+	if exe, err := os.Executable(); err == nil {
+		viper.AddConfigPath(filepath.Dir(exe))
+	}
+
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
