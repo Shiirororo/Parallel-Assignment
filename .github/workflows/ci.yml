@@ -25,10 +25,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Read config
-        id: cfg
-        run: |
-          echo "port=$(grep 'port' config.yml | head -1 | awk '{print $2}')" >> $GITHUB_OUTPUT
+      # - name: Read config
+      #   id: cfg
+      #   run: |
+      #     echo "port=$(yq '.port' config.yml)" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |
