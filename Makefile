@@ -10,7 +10,8 @@ infra-down:
 	docker-compose down
 
 warm-up:
-	go run ./cmd/warmup --csv=$(WARMUP_CSV)
+# 	go run ./cmd/warmup --csv=$(WARMUP_CSV)
+	./cmd/warmup/main
 
 unload:
 	go run ./cmd/warmup --unload

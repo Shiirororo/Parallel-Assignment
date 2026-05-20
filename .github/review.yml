@@ -1,0 +1,42 @@
+name: Codex Review
+
+on:
+  pull_request:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Codex
+        run: npm install -g @openai/codex
+
+      - name: Generate Diff
+        run: |
+          git diff origin/main...HEAD > diff.patch
+
+      - name: Run Codex Review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cat diff.patch | codex exec "
+          Review this pull request.
+          Focus on bugs, security, performance, maintainability.
+          Return concise actionable findings.
+          " > review.txt
+
+      - name: Post PR Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const body = fs.readFileSync('review.txt', 'utf8')
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            })
