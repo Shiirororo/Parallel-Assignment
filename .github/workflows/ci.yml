@@ -26,9 +26,15 @@ jobs:
           go-version-file: go.mod
 
       - name: Read config
-        id: cfg
         run: |
-          echo "port=$(yq '.port' config.yml)" >> $GITHUB_OUTPUT
+          PORT=$(yq '.port' config.yml)
+
+          if [ -z "$PORT" ] || [ "$PORT" = "null" ]; then
+            echo "Failed to read port from config.yml"
+            exit 1
+          fi
+
+          echo "port=$PORT" >> $GITHUB_OUTPUT
 
       - name: Build
         run: |
