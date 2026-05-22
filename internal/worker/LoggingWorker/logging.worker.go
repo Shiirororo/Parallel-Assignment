@@ -5,19 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"parallel/internal/dto"
 	"parallel/internal/event"
 	"parallel/internal/service"
 	"parallel/internal/worker"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-type LogginPayload struct {
-	StudentID      string `json:"student_id"`
-	SuccessClassID []int  `json:"success_class_id"`
-}
 
 type LoggingWorker struct {
 	client *mongo.Client
@@ -33,7 +30,7 @@ func newLoggingWorker(id int32, client *mongo.Client) *LoggingWorker {
 }
 
 func (lw *LoggingWorker) handle(ctx context.Context, e event.Event) {
-	var p LogginPayload
+	var p dto.LogginPayload
 	if err := json.Unmarshal(e.Request.Payload, &p); err != nil {
 		log.Printf("[ResponseWorker %d] bad payload: %v", lw.w.ID, err)
 	}
@@ -49,28 +46,40 @@ type LoggingBus struct {
 	queue       <-chan event.Event
 	client      *mongo.Client
 	workerCount atomic.Int32
+	minWorker   int
+	maxWorker   int
 	wg          sync.WaitGroup
 }
 
 func NewLoggingBus(queue <-chan event.Event, client *mongo.Client) *LoggingBus {
-	return &LoggingBus{queue: queue, client: client}
+	return &LoggingBus{queue: queue, client: client, minWorker: 10, maxWorker: 1000}
 }
 
 func (b *LoggingBus) Start(ctx context.Context, n int) {
 	for i := 0; i < n; i++ {
 		b.spawnWorker(ctx)
 	}
+	// go func() {
+
+	// }
 }
 
 func (b *LoggingBus) spawnWorker(ctx context.Context) {
+	if b.workerCount.Load() >= int32(b.maxWorker) {
+		return
+	}
 	id := b.workerCount.Add(1)
 	lw := newLoggingWorker(id, b.client)
 	b.wg.Add(1)
 	service.TrackGo(+1)
+
 	go func() {
 		defer b.wg.Done()
 		defer service.TrackGo(-1)
+		defer b.workerCount.Add(-1)
 		defer lw.w.State.Store(false)
+		idleTimer := time.NewTimer(30 * time.Second)
+		defer idleTimer.Stop()
 		for {
 			select {
 			case e, ok := <-b.queue:
@@ -89,6 +98,10 @@ func (b *LoggingBus) spawnWorker(ctx context.Context) {
 					default:
 						return
 					}
+				}
+			case <-idleTimer.C:
+				if b.workerCount.Load() > int32(b.minWorker) {
+					return
 				}
 			}
 		}

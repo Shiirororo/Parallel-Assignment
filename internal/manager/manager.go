@@ -40,6 +40,11 @@ func (ig *IngressRouter) Publish(bus string, e Event) {
 	}
 }
 
+type WorkerMonitor interface {
+	WorkerCount() int
+	Name() string
+}
+
 func (ig *IngressRouter) Counter() <-chan Event  { return ig.cBus.queue }
 func (ig *IngressRouter) Response() <-chan Event { return ig.rBus.queue }
 func (ig *IngressRouter) Logging() <-chan Event  { return ig.lBus.queue }

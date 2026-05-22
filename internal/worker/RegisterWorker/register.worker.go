@@ -1,9 +1,10 @@
-package response
+package register
 
 import (
 	"context"
 	"encoding/json"
 	"log"
+	"parallel/internal/dto"
 	"parallel/internal/event"
 	luascripting "parallel/internal/lua-scripting"
 	"parallel/internal/service"
@@ -16,11 +17,6 @@ import (
 )
 
 // RegisterPayload is the expected event payload for a register request.
-type RegisterPayload struct {
-	ClassID    string `json:"class_id"`
-	StudentID  string `json:"student_id"`  //Need to be array
-	ResponseCh string `json:"response_ch"` // identifier / correlation ID for the response
-}
 
 // ResponseWorker processes a single register-response event.
 type RegisterWorker struct {
@@ -28,7 +24,7 @@ type RegisterWorker struct {
 	w      worker.Worker
 }
 
-func newResponseWorker(id int32, client *redis.Client) *RegisterWorker {
+func newRegisterWorker(id int32, client *redis.Client) *RegisterWorker {
 	rw := &RegisterWorker{client: client}
 	rw.w.ID = id
 	rw.w.Job = "Response"
@@ -37,7 +33,7 @@ func newResponseWorker(id int32, client *redis.Client) *RegisterWorker {
 }
 
 func (r *RegisterWorker) handle(ctx context.Context, e event.Event) {
-	var p RegisterPayload
+	var p dto.RegisterPayload
 	if err := json.Unmarshal(e.Request.Payload, &p); err != nil {
 		log.Printf("[ResponseWorker %d] bad payload: %v", r.w.ID, err)
 		return
@@ -72,15 +68,23 @@ func (b *RegisterBus) Start(ctx context.Context, n int) {
 	for i := 0; i < n; i++ {
 		b.spawnWorker(ctx)
 	}
+	// //monitor function
+	// go func() {
+	// 	defer
+	// }
 
 	//monitor, scale worker is needed?
 }
 
 func (b *RegisterBus) spawnWorker(ctx context.Context) {
+	if b.workerCount.Load() >= int32(b.maxWorker) {
+		return
+	}
 	id := b.workerCount.Add(1)
-	rw := newResponseWorker(id, b.client)
+	rw := newRegisterWorker(id, b.client)
 	b.wg.Add(1)
 	service.TrackGo(+1)
+
 	go func() {
 		defer b.wg.Done()
 		defer service.TrackGo(-1)

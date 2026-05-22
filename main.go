@@ -9,8 +9,9 @@ import (
 	luascripting "parallel/internal/lua-scripting"
 	"parallel/internal/manager"
 	"parallel/internal/service"
+	counter "parallel/internal/worker/CounterWorker"
 	logging "parallel/internal/worker/LoggingWorker"
-	response "parallel/internal/worker/RegisterWorker"
+	register "parallel/internal/worker/RegisterWorker"
 	"strings"
 )
 
@@ -24,12 +25,14 @@ func main() {
 	//Define router, bus
 	router := manager.NewIngressRouter(256)
 
-	registerBus := response.NewRegisterBus(router.Response(), rd)
+	//insert queue spawn from router
+	registerBus := register.NewRegisterBus(router.Response(), rd)
 	loggingBus := logging.NewLoggingBus(router.Logging(), db)
-	//counterBus := counter.NewCounterBus()
+	counterBus := counter.NewCounterBus(router.Counter(), rd)
 
 	registerBus.Start(ctx, 4) //init 4 workers
 	loggingBus.Start(ctx, 4)  //init 4 workers
+	counterBus.Start(ctx, 4)  //init 4 workers
 
 	fmt.Printf("Active business goroutines: %d\n", service.ActiveGoroutines())
 	go func() {
@@ -65,6 +68,22 @@ func main() {
 	})
 	http.HandleFunc("/api/class/unregister", func(w http.ResponseWriter, r *http.Request) {
 
+	})
+	http.HandleFunc("/api/scale-up", func(w http.ResponseWriter, r *http.Request) {
+		worker := r.URL.Query().Get("worker")
+		if worker == "" {
+			http.Error(w, "missing worker id", http.StatusBadRequest)
+			return
+		}
+		// 	select {
+		// 	case worker := "register":
+		// 		registerBus.spawnWorker()
+		// 	default:
+		// 		return
+		// }
+		if worker == "register" {
+			// registerBus.spawnWorker(context.Context)
+		}
 	})
 	http.ListenAndServe(":36789", nil)
 }
