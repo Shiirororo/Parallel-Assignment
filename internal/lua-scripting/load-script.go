@@ -1,27 +1,20 @@
 package luascripting
 
 import (
-	"os"
+	_ "embed"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func loadScript(path string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	return string(data)
-}
+//go:embed scripts/script.register.lua
+var registerScript string
 
-var RegisterScript = redis.NewScript(
-	loadScript("./internal/lua-scripting/scripts/script.register.lua"),
-)
+//go:embed scripts/script.get-class.lua
+var getClassScript string
 
-var GetClassScript = redis.NewScript(
-	loadScript("./internal/lua-scripting/scripts/script.get-class.lua"),
-)
+//go:embed scripts/script.unregister.lua
+var unregisterScript string
 
-var UnregisterScript = redis.NewScript(
-	loadScript("./internal/lua-scripting/scripts/script.unregister.lua"),
-)
+var RegisterScript = redis.NewScript(registerScript)
+var GetClassScript = redis.NewScript(getClassScript)
+var UnregisterScript = redis.NewScript(unregisterScript)

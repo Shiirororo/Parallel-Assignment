@@ -6,7 +6,11 @@ import (
 )
 
 func Run() (*redis.Client, *mongo.Client) {
-	config := LoadConfig()
+	return RunFrom(".")
+}
+
+func RunFrom(path string) (*redis.Client, *mongo.Client) {
+	config := LoadConfigFrom(path)
 
 	rdb := InitRedis(config)
 	db := InitDB(config)

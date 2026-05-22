@@ -13,8 +13,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+//WORKER DECLARATIOn
 
 type LoggingWorker struct {
 	client *mongo.Client
@@ -32,15 +35,36 @@ func newLoggingWorker(id int32, client *mongo.Client) *LoggingWorker {
 func (lw *LoggingWorker) handle(ctx context.Context, e event.Event) {
 	var p dto.LogginPayload
 	if err := json.Unmarshal(e.Request.Payload, &p); err != nil {
-		log.Printf("[ResponseWorker %d] bad payload: %v", lw.w.ID, err)
+		log.Printf("[LoggingWorker %d] bad payload: %v", lw.w.ID, err)
+		return
 	}
 	collection := lw.client.Database("class-registration").Collection("success")
-	res, err := collection.InsertOne(ctx, p)
-	if err != nil {
-		panic(err)
+
+	switch p.Action {
+	case 0:
+		res, err := collection.InsertOne(ctx, p)
+		if err != nil {
+			log.Printf("[LoggingWorker %d] insert error: %v", lw.w.ID, err)
+			return
+		}
+		fmt.Printf("[LoggingWorker %d] created record: %s\n", lw.w.ID, res.InsertedID)
+
+	case 1:
+		filter := bson.M{"student_id": p.StudentID}
+		update := bson.M{"$push": bson.M{"success_class_id": bson.M{"$each": p.SuccessClassID}}}
+		res, err := collection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			log.Printf("[LoggingWorker %d] update error: %v", lw.w.ID, err)
+			return
+		}
+		fmt.Printf("[LoggingWorker %d] updated record matched=%d modified=%d\n", lw.w.ID, res.MatchedCount, res.ModifiedCount)
+
+	default:
+		log.Printf("[LoggingWorker %d] unknown action: %d", lw.w.ID, p.Action)
 	}
-	fmt.Printf("Successfully Insert into a table: %s", res.InsertedID)
 }
+
+//BUS DECLARATION
 
 type LoggingBus struct {
 	queue       <-chan event.Event
@@ -86,6 +110,11 @@ func (b *LoggingBus) spawnWorker(ctx context.Context) {
 				if !ok {
 					return
 				}
+				if !idleTimer.Stop() {
+					<-idleTimer.C
+				}
+				idleTimer.Reset(30 * time.Second)
+
 				lw.handle(ctx, e)
 			case <-ctx.Done():
 				for {
