@@ -21,3 +21,7 @@ type RegisterPayload struct {
 // 	StudentID  string `json:"student_id" bson:"student_id"`
 // 	Unregister []int  `json:"unregister_class_id"`
 // }
+
+type ClassInfo struct {
+	RemainSlot int `json:"remain_slot"`
+}

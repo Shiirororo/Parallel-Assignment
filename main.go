@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	bootstrap "parallel/init"
 	"parallel/internal/dto"
 	"parallel/internal/event"
-	luascripting "parallel/internal/lua-scripting"
 	"parallel/internal/manager"
 	"parallel/internal/service"
 	counter "parallel/internal/worker/CounterWorker"
 	logging "parallel/internal/worker/LoggingWorker"
 	register "parallel/internal/worker/RegisterWorker"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -32,8 +33,23 @@ func main() {
 	loggingBus.Start(ctx, 4)
 	counterBus.Start(ctx, 4)
 
+	cache := service.NewCache(rd)
+	if err := cache.LoadCache(ctx); err != nil {
+		panic(err)
+	} //init load cache, if fail we get diddied
+
+	//parallel local cache layer, reduce stress on redis
+	go func() {
+		for {
+			if err := cache.LoadCache(ctx); err != nil {
+				log.Println(err)
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}()
+
 	fmt.Printf("Active business goroutines: %d\n", service.ActiveGoroutines())
-	go func() { http.ListenAndServe("localhost:6060", nil) }()
+	//go func() { http.ListenAndServe("localhost:6060", nil) }()
 
 	http.HandleFunc("/api/class/getClassInfo", func(w http.ResponseWriter, r *http.Request) {
 		ids := r.URL.Query().Get("ids")
@@ -42,17 +58,12 @@ func main() {
 			return
 		}
 		keys := strings.Split(ids, ",")
-		raw, err := luascripting.GetClassScript.Run(r.Context(), rd, keys).StringSlice()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		type ClassInfo struct {
-			RemainSlot string `json:"remain_slot"`
-		}
-		result := make(map[string]ClassInfo, len(raw)/2)
-		for i := 0; i+1 < len(raw); i += 2 {
-			result[raw[i]] = ClassInfo{RemainSlot: raw[i+1]}
+
+		result := make(map[string]dto.ClassInfo, len(keys))
+		for _, key := range keys {
+			if v, ok := cache.Get(key); ok {
+				result[key] = dto.ClassInfo{RemainSlot: v}
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
