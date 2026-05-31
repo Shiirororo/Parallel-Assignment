@@ -96,7 +96,29 @@ func main() {
 	})
 
 	http.HandleFunc("/api/class/unregister", func(w http.ResponseWriter, r *http.Request) {
+		var p dto.RegisterPayload
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil || p.ClassID == "" || p.StudentID == "" {
+			http.Error(w, "invalid payload", http.StatusBadRequest)
+			return
+		}
 
+		raw, _ := json.Marshal(p)
+		e := event.Event{
+			Type:    "unregister",
+			Request: event.Request{OriginID: p.ResponseCh, Payload: raw},
+		}
+
+		// RegisterWorker: increment Redis slot back via Lua
+		router.Publish("response", e)
+		// CounterWorker: track active registrations
+		router.Publish("counter", e)
+		// LoggingWorker: remove class from student record (action=2)
+		logRaw, _ := json.Marshal(dto.LogginPayload{Action: 2, StudentID: p.StudentID, SuccessClassID: []int{}})
+		router.Publish("logging", event.Event{
+			Request: event.Request{OriginID: p.StudentID, Payload: logRaw},
+		})
+
+		w.WriteHeader(http.StatusAccepted)
 	})
 
 	http.HandleFunc("/api/scale-up", func(w http.ResponseWriter, r *http.Request) {

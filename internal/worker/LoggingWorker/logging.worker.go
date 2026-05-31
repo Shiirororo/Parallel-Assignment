@@ -59,6 +59,16 @@ func (lw *LoggingWorker) handle(ctx context.Context, e event.Event) {
 		}
 		fmt.Printf("[LoggingWorker %d] updated record matched=%d modified=%d\n", lw.w.ID, res.MatchedCount, res.ModifiedCount)
 
+	case 2:
+		filter := bson.M{"student_id": p.StudentID}
+		update := bson.M{"$pull": bson.M{"success_class_id": bson.M{"$in": p.SuccessClassID}}}
+		res, err := collection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			log.Printf("[LoggingWorker %d] unregister error: %v", lw.w.ID, err)
+			return
+		}
+		fmt.Printf("[LoggingWorker %d] unregistered matched=%d modified=%d\n", lw.w.ID, res.MatchedCount, res.ModifiedCount)
+
 	default:
 		log.Printf("[LoggingWorker %d] unknown action: %d", lw.w.ID, p.Action)
 	}

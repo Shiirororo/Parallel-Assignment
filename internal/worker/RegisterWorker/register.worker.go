@@ -39,13 +39,18 @@ func (r *RegisterWorker) handle(ctx context.Context, e event.Event) {
 		return
 	}
 
-	result, err := luascripting.RegisterScript.Run(ctx, r.client, []string{p.ClassID}).Int()
+	script := luascripting.RegisterScript
+	if e.Type == "unregister" {
+		script = luascripting.UnregisterScript
+	}
+
+	result, err := script.Run(ctx, r.client, []string{p.ClassID}).Int()
 	if err != nil {
 		log.Printf("[ResponseWorker %d] lua error: %v", r.w.ID, err)
 		return
 	}
 
-	log.Printf("[ResponseWorker %d] class=%s student=%s status=%d", r.w.ID, p.ClassID, p.StudentID, result)
+	log.Printf("[ResponseWorker %d] type=%s class=%s student=%s status=%d", r.w.ID, e.Type, p.ClassID, p.StudentID, result)
 }
 
 // Bus
